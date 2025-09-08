@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Spy Game</title>
+  <meta name="description" content="Jeu de rôle: un espion, un lieu — distribuez les rôles et lancez un timer.">
+  <style>
+    :root {
+      --primary-bg: #121212;
+      --card-bg: #1e1e1e;
+      --accent: #00bcd4;
+      --danger: #f44336;
+      --text: #f5f5f5;
+      --text-muted: #aaaaaa;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 95%;
+      max-width: 600px;
+      margin-top: 20px;
+      padding: 15px;
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 15px;
+      color: var(--accent);
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    select,
+    input[type="text"],
+    input[type="number"] {
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      width: 100%;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 24px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--accent);
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #019aaa;
+    }
+
+    .player-card {
+      background-color: var(--card-bg);
+      padding: 16px;
+      margin: 16px auto;
+      border-radius: 12px;
+      max-width: 300px;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+      transition: transform 0.2s;
+    }
+
+    .player-card:hover {
+      transform: scale(1.03);
+    }
+
+    .role {
+      display: none;
+      margin-top: 12px;
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+
+    .spy {
+      color: var(--danger);
+      font-weight: bold;
+    }
+
+    .timer {
+      margin-top: 20px;
+      font-size: 1.2em;
+      text-align: center;
+    }
+
+    .timer.expired {
+      color: var(--danger);
+    }
+
+    .location-bold {
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .spy-mode {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background-color: #2a2a2a;
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    .spy-mode input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+    }
+
+    .spy-mode label {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.6em;
+      }
+
+      .button-row {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spy Game</h1>
+
+    <label for="theme">Choisir un thème :</label>
+    <select id="theme"></select>
+
+    <label for="playerCount">Nombre de joueurs :</label>
+    <select id="playerCount"></select>
+
+    <label for="playerNames">Noms des joueurs :</label>
+    <input type="text" id="playerNames" placeholder="Séparez les noms par des virgules" />
+
+    <label>Timer :</label>
+    <input type="number" id="timerMinutes" placeholder="Minutes" min="0" />
+    <input type="number" id="timerSeconds" placeholder="Secondes" min="0" max="59" />
+
+    <div class="button-row">
+      <button type="button" onclick="startTimer()">Lancer le timer</button>
+      <button type="button" onclick="pauseTimer()">Pause</button>
+    </div>
+
+    <div class="spy-mode">
+      <input type="checkbox" id="spyModeCheckbox" />
+      <label for="spyModeCheckbox">Mode <strong>Tous Espions</strong> (sauf un)</label>
+    </div>
+
+    <div id="timerDisplay" class="timer"></div>
+    <div id="rolesContainer"></div>
+    <button id="startButton" type="button" onclick="startGame()">Commencer</button>
+  </div>
+
+  <script>
+    const themes = {
+      "default": { "name": "Par défaut", "locations": ["Maison", "École", "Travail", "Supermarché", "Rue", "Parc", "Cinéma", "Plage", "Montagne", "Café", "Train", "Voiture", "Aéroport", "Hôtel", "Musée", "Bibliothèque", "Hôpital", "Stade", "Centre commercial", "Salle de sport"] },
+      "sciFi": { name: "Science Fiction", locations: ["Station spatiale", "Base lunaire", "Navette intergalactique", "Laboratoire alien", "Planète hostile", "Vaisseau abandonné", "Colonie martienne", "Blade Runner", "Terre post-apo", "Monde virtuel"] },
+      "timeTravel": { name: "Voyage dans le Temps", locations: ["Préhistoire", "Égypte Antique", "Moyen Âge", "Révolution française", "Années 1920", "Années 80", "Futur lointain", "Rome antique", "Grèce antique", "Ère victorienne"] },
+      "western": { name: "Western", locations: ["Saloon", "Mine d'or", "Train en marche", "Prison du Far West", "Ranch", "Ville désertique", "Canyon", "Bureau du shérif", "Diligence", "Campement d'indiens"] },
+      "countries": { "name": "Pays", "locations": ["France", "Italie", "Espagne", "Allemagne", "Portugal", "Belgique", "Pays-Bas", "Suisse", "Autriche", "Royaume-Uni", "Irlande", "Norvège", "Suède", "Danemark", "Finlande", "États-Unis", "Canada", "Mexique", "Brésil", "Argentine", "Colombie", "Chili", "Australie", "Nouvelle-Zélande", "Chine", "Japon", "Corée du Sud", "Inde", "Indonésie", "Thaïlande", "Vietnam", "Afrique du Sud", "Maroc", "Égypte", "Tunisie", "Turquie", "Grèce", "Pologne", "Hongrie", "Russie"] },
+      "classPeople": { "name": "Gens de la classe", "locations": ["Maëlie ALVAREZ", "Emma BEZAUD", "Emma BINOIS", "Chloé CHAMBA", "Maimouna DIOP", "Gabrielle GANTZ", "Zaccharie GUIEU", "Laurine HAAN", "Christian Sari MENDOZA", "Rayane BENHARIRA", "Tim BERTHAUD", "Célia BOURNAZEL", "Divya CARNOT", "Xiao CHANG", "Valentine COLLIAT", "Lilou DESSUP", "Saliou DIALLO", "Lora FONTAINE", "Lou GALLETYER", "Loïc JAILLET", "Costantino PERRIG", "Amélie SPERLING", "Esteban TAILLADE"] },
+      "moviesSeries": { "name": "Films&Series", "locations": ["Titanic", "Avatar", "Avengers: Endgame", "Harry Potter", "Game of Thrones", "Breaking Bad", "Friends", "The Simpsons", "Stranger Things", "The Lord of the Rings", "Spider-Man: No Way Home", "The Dark Knight", "Star Wars", "The Matrix", "The Walking Dead", "The Big Bang Theory", "Frozen", "Shrek", "The Lion King", "Squid Game", "Avant le Silence", "Le portrait de Tim Berthaud"] },
+      "villes": { name: "Villes", locations: ["Paris", "New York", "Tokyo", "Londres", "Berlin", "Madrid", "Rome", "Buenos Aires", "Moscou", "Sydney", "Los Angeles", "Montréal", "Le Caire", "Pékin", "Delhi", "Istanbul", "Dubaï", "Barcelone", "Stockholm", "Rio de Janeiro", "Krakovie", "Poznan", "Amsterdam"] },
+      "culture": { name: "Culture", locations: ["Musée", "Théâtre", "Opéra", "Cinéma", "Salle de concert", "Festival", "Expo", "Centre culturel", "Galerie d'art", "Studio de danse", "École d'art", "Conservatoire", "Auditorium", "Boîte de nuit", "Bibliothèque", "Amphithéâtre", "Maison des jeunes", "Studio radio", "Cabaret", "Place publique"] },
+      "musique": { name: "Musique", locations: ["Beyoncé", "Daft Punk", "Drake", "Adele", "Billie Eilish", "Stromae", "Jul", "Rosalía", "Booba", "Lady Gaga", "Angèle", "Kendrick Lamar", "Rihanna", "The Weeknd", "Taylor Swift", "PNL", "SCH", "Travis Scott", "Orelsan", "Aya Nakamura", "Pink Floyd", "ABBA", "Queen", "The Beatles", "Michael Jackson", "Elton John", "David Bowie", "The Rolling Stones", "Nirvana", "U2"] },
+	  "alcohol": { "name": "Alcool", "locations": ["Bière", "Vin rouge", "Champagne", "Whisky", "Rhum", "Vodka", "Tequila", "Gin", "Saké", "Pastis"] },
+      "boitesGrenoble": { name: "Une nuit à Grenoble", locations: ["La Belle Électrique", "Le Drak-Art", "Le Marquee", "L'Amperage", "Le Barberousse", "Le Phoenix", "Le Tord Boyaux", "Le Subway", "Le Hasard", "Le Jardin", "Laser game"] },
+	  "numbers": { "name": "Chiffres", "locations": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] },
+	  "candidatsPresidentielle": { "name": "Candidats à la Présidentielle", "locations": ["Emmanuel Macron", "Marine Le Pen", "Jean-Luc Mélenchon", "Éric Zemmour", "Valérie Pécresse", "Yannick Jadot", "Fabien Roussel", "Anne Hidalgo", "Jean Lassalle", "Philippe Poutou"] },
+	  "colors": { "name": "Couleurs", "locations": ["Rouge", "Bleu", "Vert", "Jaune", "Orange", "Violet", "Rose", "Noir", "Blanc", "Gris"] },
+	  "tracklist": { "name": "SUPER ERO", "locations": ["PRÉLIMINAIRES", "2 NUANCES DE GRÉ", "SENSUEL MENSUEL", "EXPLORER TESSIN", "COPINE COQUINE", "MISSION SEDUCTION", "HORNY HONEY", "ÉMOTIF", "URANUS", "53X · 53 FOIS", "DANS LA DENTELLE", "L1NG3R13, D1NGU3R13", "BIEN MANGER, BIEN DORMIR", "CLIMAX"] }
+    };
+
+    const themeSelect = document.getElementById("theme");
+    const playerCountSelect = document.getElementById("playerCount");
+
+    for (const [key, value] of Object.entries(themes)) {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = value.name;
+      themeSelect.appendChild(option);
+    }
+
+    for (let i = 3; i <= 10; i++) {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = i;
+      playerCountSelect.appendChild(option);
+    }
+
+    function startGame() {
+      const themeKey = themeSelect.value;
+      const theme = themes[themeKey];
+      const playerCount = parseInt(playerCountSelect.value);
+      const rawNames = document.getElementById("playerNames").value;
+      let names = rawNames.split(',').map(n => n.trim()).filter(n => n);
+      const spyMode = document.getElementById("spyModeCheckbox").checked;
+      const rolesContainer = document.getElementById("rolesContainer");
+      rolesContainer.innerHTML = "";
+
+      if (names.length < playerCount) {
+        names = Array.from({ length: playerCount }, (_, i) => names[i] || `Joueur ${i + 1}`);
+      }
+
+      const shuffledNames = [...names].sort(() => Math.random() - 0.5);
+      const roles = Array(playerCount).fill('Agent');
+
+      if (spyMode) {
+        roles.fill('Espion');
+        const randomIndex = Math.floor(Math.random() * playerCount);
+        roles[randomIndex] = 'Agent';
+      } else {
+        const spyIndex = Math.floor(Math.random() * playerCount);
+        roles[spyIndex] = 'Espion';
+      }
+
+      const location = theme.locations[Math.floor(Math.random() * theme.locations.length)];
+
+      shuffledNames.forEach((name, i) => {
+        const card = document.createElement("div");
+        card.className = "player-card";
+        const role = roles[i] === 'Espion' ? `<span class="spy">Espion</span>` : `Lieu : <span class="location-bold">${location}</span>`;
+        card.innerHTML = `<strong>${name}</strong><div class="role">${role}</div>`;
+        card.onclick = () => {
+          const roleDiv = card.querySelector(".role");
+          roleDiv.style.display = roleDiv.style.display === "block" ? "none" : "block";
+        };
+        rolesContainer.appendChild(card);
+      });
+    }
+
+    let timerInterval;
+
+    function startTimer() {
+      const minutes = parseInt(document.getElementById("timerMinutes").value) || 0;
+      const seconds = parseInt(document.getElementById("timerSeconds").value) || 0;
+      let timeLeft = minutes * 60 + seconds;
+      const timerDisplay = document.getElementById("timerDisplay");
+
+      clearInterval(timerInterval);
+
+      function updateDisplay() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        timerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          timerDisplay.classList.add("expired");
+          timerDisplay.textContent = "Temps écoulé !";
+        } else {
+          timerDisplay.classList.remove("expired");
+        }
+      }
+
+      updateDisplay();
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateDisplay();
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timerInterval);
+    }
+  </script>
+</body>
+</html>
